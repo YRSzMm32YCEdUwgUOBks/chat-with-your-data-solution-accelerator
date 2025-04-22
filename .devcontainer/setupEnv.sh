@@ -2,6 +2,11 @@
 
 echo "===== [setupEnv.sh] Setting up local development environment ====="
 
+# changing ownership of the workspace directory to the current user
+# this is probably not necessary and not secure (required because repo cloned from WSL root)
+# TODO: real developer fix this please
+sudo chown -R vscode:vscode /workspace
+
 # Ensure Docker is running
 if ! docker info >/dev/null 2>&1; then
     echo "[ERROR] Docker is not running. Please start Docker Desktop."
