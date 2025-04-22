@@ -1,173 +1,149 @@
 [Back to *Chat with your data* README](../README.md)
 
-# Local setup
+# Local Development (Fast Start)
 
-> **Note for macOS Developers**: If you are using macOS on Apple Silicon (ARM64) the DevContainer will **not** work. This is due to a limitation with the Azure Functions Core Tools (see [here](https://github.com/Azure/azure-functions-core-tools/issues/3112)). We recommend using the [Non DevContainer Setup](./NON_DEVCONTAINER_SETUP.md) instructions to run the accelerator locally.
+> **This fork is optimized for rapid, modular local development.**
+> No Azure subscription required for local dev. All services run locally via Docker Compose.
+> Ideal for frontend/backend contributors and fast prototyping.
 
-The easiest way to run this accelerator is in a VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+---
 
-1. Start Docker Desktop (install it if not already installed)
-1. Open the project:
-    [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/azure-samples/chat-with-your-data-solution-accelerator)
-1. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window
-1. Run `azd auth login`
-1. Run `azd env set AZURE_APP_SERVICE_HOSTING_MODEL code` - This sets your environment to deploy code rather than rely on public containers, like the "Deploy to Azure" button.
-1. Run `azd up` - This will provision Azure resources and deploy the accelerator to those resources.
+## Service Overview
 
-    * **Important**: Beware that the resources created by this command will incur immediate costs, primarily from the AI Search resource. These resources may accrue costs even if you interrupt the command before it is fully executed. You can run `azd down` or delete the resources manually to avoid unnecessary spending.
-    * You will be prompted to select a subscription, and a location. That location list is based on the [OpenAI model availability table](https://learn.microsoft.com/azure/cognitive-services/openai/concepts/models#model-summary-table-and-region-availability) and may become outdated as availability changes.
-    * If you do, accidentally, chose the wrong location; you will have to ensure that you use `azd down` or delete the Resource Group as the deployment bases the location from this Resource Group.
-1. After the application has been successfully deployed you will see a URL printed to the console.  Click that URL to interact with the application in your browser.
+| Service   | Port(s) | Description                        |
+|-----------|---------|------------------------------------|
+| frontend  | 8080    | React UI (Vite, hot reload)        |
+| backend   | 8082    | Python API (Flask/Azure Functions) |
+| admin     | 8081    | Admin UI (Streamlit)               |
+| postgres  | 5432    | PostgreSQL (with pgvector)         |
+| azurite   | 10000+  | Azure Blob/Queue/Table emulator    |
+| migrate   | -       | DB migration/init (runs once)      |
 
-> NOTE: It may take up to an hour for the application to be fully deployed. If you see a "Python Developer" welcome screen or an error page, then wait a bit and refresh the page.
+---
 
-> NOTE: The default auth type uses keys that are stored in the Azure Keyvault. If you want to use RBAC-based auth (more secure), please run before deploying:
+## 1️⃣ Clone the Repo *Inside WSL*
+
+**Why?**
+Cloning inside WSL avoids slow file access between Windows and Linux filesystems.
 
 ```bash
-azd env set AZURE_AUTH_TYPE rbac
-azd env set USE_KEY_VAULT false
+git clone https://github.com/YRSzMm32YCEdUwgUOBks/chat-with-your-data-solution-accelerator.git
+cd chat-with-your-data-solution-accelerator
+cp .env.example .env
 ```
 
-Also please refer to the section on [setting up RBAC auth](#authenticate-using-rbac).
+---
 
-## Detailed Development Container setup instructions
+## 2️⃣ Open in VS Code (Dev Container)
 
-The solution contains a [development container](https://code.visualstudio.com/docs/remote/containers) with all the required tooling to develop and deploy the accelerator. To deploy the Chat With Your Data accelerator using the provided development container you will also need:
+- From your WSL terminal, run:
+  ```bash
+  code .
+  ```
+- VS Code will prompt: **"Reopen in Container"**.
+  If you miss it, open the Command Palette and search for "Reopen in Container".
 
-* [Visual Studio Code](https://code.visualstudio.com)
-* [Remote containers extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+  ![VS Code "Reopen in Container" prompt](images/cwyd-localdeploy-reopenincontainerprompt.png)
 
-If you are running this on Windows, we recommend you clone this repository in [WSL](https://code.visualstudio.com/docs/remote/wsl)
+- **First build:** ~10 minutes (downloads images, builds containers).
+  **Subsequent builds:** ~2 minutes.
 
-```cmd
-git clone https://github.com/Azure-Samples/chat-with-your-data-solution-accelerator
+![VSCode Devcontainer startup](images/cwyd-localdeploy-reopenincontainerrun.png)
+
+---
+
+## 3️⃣ Start All Services
+
+This should be done automatically when the devcontainer reopens. If not, or to reinitalize, run from the VS Code terminal (or WSL shell):
+
+```bash
+./start.sh
 ```
 
-Open the cloned repository in Visual Studio Code and connect to the development container.
+- This loads your `.env` and starts all services via Docker Compose.
+- **To tail all logs in real time (recommended):**
+  ```bash
+  docker compose -f docker-compose.local.yml logs -f
+  ```
+  > (Use `docker compose` not `docker-compose` for best compatibility.)
 
-```cmd
-code .
-```
+![All local services running and ready for local dev](images/cwyd-localdeploy-running.png)
+---
 
-!!! tip
-    Visual Studio Code should recognize the available development container and ask you to open the folder using it. For additional details on connecting to remote containers, please see the [Open an existing folder in a container](https://code.visualstudio.com/docs/remote/containers#_quick-start-open-an-existing-folder-in-a-container) quickstart.
+## 4️⃣ Access the Apps
 
-When you start the development container for the first time, the container will be built. This usually takes a few minutes. **Please use the development container for all further steps.**
+- **Frontend:** [http://localhost:8080/](http://localhost:8080/)
+- **Admin:** [http://localhost:8081/](http://localhost:8081/)
+- **Backend API:** [http://localhost:8082/](http://localhost:8082/)
 
-The files for the dev container are located in `/.devcontainer/` folder.
+> ![place screenshot of all three apps running in browser here]
 
-## Local debugging
+---
 
-To customize the accelerator or run it locally, you must provision the Azure resources by running `azd provision` in a Terminal. This will generate a `.env` for you and you can use the "Run and Debug" (Ctrl + Shift + D) command to chose which part of the accelerator to run.  There is an [environment variable values table](#environment-variables) below.
+## 5️⃣ Typical Workflow
 
+- Edit code in `code/frontend`, `code/backend`, or `code/backend/batch`.
+- Frontend hot reloads automatically.
+- Backend/admin restart on code changes (or restart containers).
+- Database and storage persist unless you remove Docker volumes.
 
-To run the accelerator in local when the solution is secured by RBAC you need to assign some roles to your principal id. You can do it either manually or programatically.
+---
 
-### Manually assign roles
-You need to assign the following roles to your `PRINCIPALID` (you can get your 'principal id' from Microsoft Entra ID):
+## Advanced: Run Individual Services
 
-| Role | GUID |
-|----|----|
-|  Cognitive Services OpenAI Contributor | a001fd3d-188f-4b5d-821b-7da978bf7442 |
-| Search Service Contributor | 7ca78c08-252a-4471-8644-bb5ff32d4ba0 |
-| Search Index Data Contributor | 8ebe5a00-799e-43f5-93ac-243d3dce84a7 |
-| Storage Blob Data Reader | 2a2b9908-6ea1-4ae2-8e65-a410df84e7d1 |
-| Reader | acdd72a7-3385-48ef-bd42-f606fba81ae7 |
-
-### Programatically assign roles
-You can also update the `principalId` value with your own principalId in the `main.bicep` file.
-
-### Authenticate using RBAC
-To authenticate using API Keys, update the value of `AZURE_AUTH_TYPE` to keys. For accessing using 'rbac', manually make changes by following the below steps:
-1. Ensure role assignments listed on [this page](https://techcommunity.microsoft.com/t5/ai-azure-ai-services-blog/eliminate-dependency-on-key-based-authentication-in-azure/ba-p/3821880)
-have been created.
-2. Navigate to your Search service in the Azure Portal
-3. Under Settings, select `Keys`
-4. Select either `Role-based access control` or `Both`
-5. Navigate to your App service in the Azure Portal
-6. Under Settings, select `Configuration`
-7. Set the value of the `AZURE_AUTH_TYPE` setting to `rbac`
-8. Restart the application
-
-### Deploy services manually
-
-You can deploy the full solution from local with the following command `azd deploy`. You can also deploy services individually
-
-|Service  |Description  |
-|---------|---------|
-|`azd deploy web` | A python app, enabling you to chat on top of your data.         |
-|`azd deploy adminweb`     | A Streamlit app for the "admin" site where you can upload and explore your data.         |
-|`azd deploy function`     | A python function app processing requests.          |
-
-### Running All Services Locally Using Docker Compose
-
-To run all applications using Docker Compose, you first need a `.env` file containing the configuration for your
-provisioned resources. This file can be created manually at the root of the project. Alternatively, if resources were
-provisioned using `azd provision` or `azd up`, a `.env` file is automatically generated in the `.azure/<env-name>/.env`
-file. To get your `<env-name>` run `azd env list` to see which env is default.
-
-The `AzureWebJobsStorage` needs to be added to your `.env` file manually. This can be retrieved from the function
-settings via the Azure Portal.
-
-To start the services, you can use either of the following commands:
-- `make docker-compose-up`
-- `cd docker && AZD_ENV_FILE=<path-to-env-file> docker-compose up`
-
-**Note:** By default, these commands will run the latest Docker images built from the main branch. If you wish to use a
-different image, you will need to modify the `docker/docker-compose.yml` file accordingly.
-
-### Develop & run the frontend locally
-
-For faster development, you can run the frontend Typescript React UI app and the Python Flask api app in development mode. This allows the app to "hot reload" meaning your changes will automatically be reflected in the app without having to refresh or restart the local servers.
-
-They can be launched locally from vscode (Ctrl+Shift+D) and selecting "Launch Frontend (api)" and "Launch Frontend (UI). You will also be able to place breakpoints in the code should you wish. This will automatically install any dependencies for Node and Python.
-
-
-#### Starting the Flask app in dev mode from the command line (optional)
-This step is included if you cannot use the Launch configuration in VSCode. Open a terminal and enter the following commands
-```shell
-cd code
-poetry run flask run
-```
-
-#### Starting the Typescript React app in dev mode (optional)
-This step is included if you cannot use the Launch configuration in VSCode. Open a new separate terminal and enter the following commands:
-```shell
-cd code\frontend
+**Frontend only:**
+```bash
+cd code/frontend
 npm install
 npm run dev
-```
-The local vite server will return a url that you can use to access the chat interface locally, such as  `http://localhost:5174/`.
-
-### Develop & run the admin app
-
-The admin app can be launched locally from vscode (Ctrl+Shift+D) and selecting "Launch Admin site". You will also be able to place breakpoints in the Python Code should you wish.
-
-This should automatically open `http://localhost:8501/` and render the admin interface.
-
-### Develop & run the batch processing functions
-
-If you want to develop and run the batch processing functions container locally, use the following commands.
-
-#### Running the batch processing locally
-
-First, install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=windows%2Cportal%2Cv2%2Cbash&pivots=programming-language-python).
-
-```shell
-cd code\backend\batch
-poetry run func start
+# → http://localhost:5174/
 ```
 
-Or use the [Azure Functions VS Code extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions).
+**Backend only:**
+```bash
+cd code/backend
+poetry install
+poetry run flask run
+# → http://localhost:5000/
+```
 
-#### Debugging the batch processing functions locally
-Rename the file `local.settings.json.sample` in the `batch` folder to `local.settings.json` and update the `AzureWebJobsStorage` value with the storage account connection string.
+---
 
-Copy the .env file from [previous section](#local-debugging) to the `batch` folder.
+## Troubleshooting
 
-Execute the above [shell command](#L81) to run the function locally. You may need to stop the deployed function on the portal so that all requests are debugged locally. To trigger the function, you can click on the corresponding URL that will be printed to the terminal.
+- **Docker not running?** Start Docker Desktop in Windows before launching WSL/VS Code.
+- **Dev Container build slow?** Make sure you are in WSL, not Windows filesystem.
+- **.env issues?** Copy `.env.example` and fill in as needed.
+
+---
+
+## Reference
+
+- [This fork](https://github.com/YRSzMm32YCEdUwgUOBks/chat-with-your-data-solution-accelerator)
+- [Upstream Microsoft repo](https://github.com/Azure-Samples/chat-with-your-data-solution-accelerator)
+
+---
+
+## Legacy/Advanced (Azure, RBAC, Bicep, etc.)
+
+- For full Azure deployment, RBAC, or advanced configuration, see the [original Microsoft README](https://github.com/Azure-Samples/chat-with-your-data-solution-accelerator/blob/main/README.md).
+- **macOS Apple Silicon:** DevContainer may not work ([see upstream issue](https://github.com/Azure/azure-functions-core-tools/issues/3112)). Use [NON_DEVCONTAINER_SETUP.md](../NON_DEVCONTAINER_SETUP.md) if needed.
 
 ## Environment variables
+
+> **Note:** Many of the environment variables listed below are for Azure cloud deployment and are not required for local development. This section will be cleaned up in the future to better distinguish between local and cloud-only variables.
+
+### Minimum required environment variables for local deployment
+
+For a typical local setup, you only need to set the following variables in your `.env` file:
+
+- `POSTGRES_PASSWORD` – Password for the local PostgreSQL instance
+- `AZURE_OPENAI_API_KEY` – (Optional for local, only if testing OpenAI integration)
+- `AZURE_OPENAI_MODEL_NAME` – (Optional, defaults to `gpt-4o`)
+- `AZURE_OPENAI_EMBEDDING_MODEL_NAME` – (Optional, defaults to `text-embedding-ada-002`)
+
+All other variables can be left as defaults or empty for local-only development.
+
 
 | App Setting | Value | Note |
 | --- | --- | ------------- |
