@@ -18,6 +18,8 @@ echo "===== [setupEnv.sh] Setting up local development Environment Components Do
 
 pip install --upgrade pip
 
+pip install bs4
+
 pip install poetry
 
 # https://pypi.org/project/poetry-plugin-export/
