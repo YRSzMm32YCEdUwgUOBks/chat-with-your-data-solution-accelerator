@@ -1,11 +1,19 @@
-FROM mcr.microsoft.com/azure-functions/python:4-python3.11
+# Use the official Azure Functions Python image
+FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 
-ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
-    AzureFunctionsJobHost__Logging__Console__IsEnabled=true \
-    AzureWebJobsFeatureFlags=EnableWorkerIndexing
-
+# Copy project and dependency files
 COPY pyproject.toml /
 COPY poetry.lock /
-RUN pip install --upgrade pip && pip install python-dotenv && pip install poetry && poetry self add poetry-plugin-export && poetry export -o requirements.txt && pip install -r requirements.txt
 
-COPY ./code/backend/batch /home/site/wwwroot
+# Install dependencies using Poetry
+RUN pip install --upgrade pip && \
+    pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-root
+
+# Set the working directory to where the function code will reside
+WORKDIR /home/site/wwwroot
+
+# Don't copy the function code here - it will be mounted in the Docker Compose
+# The following line is commented out to avoid duplication with volume mounts
+# COPY ./code/backend/azure_function /home/site/wwwroot/
