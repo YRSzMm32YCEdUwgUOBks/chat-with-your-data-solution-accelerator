@@ -1,34 +1,51 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "func",
-			"label": "func: host start",
-			"command": "host start",
-			"problemMatcher": "$func-python-watch",
-			"isBackground": true,
-			"dependsOn": "poetry install",
-			"options": {
-				"cwd": "${workspaceFolder}/code/backend/batch"
-			}
-		},
-		{
-			"label": "poetry install",
-			"type": "shell",
-			"command": "poetry install",
-			"problemMatcher": [],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			}
-		},
-		{
-			"label": "npm install",
-			"type": "shell",
-			"command": "npm install",
-			"problemMatcher": [],
-			"options": {
-				"cwd": "${workspaceFolder}/code/frontend"
-			}
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "poetry install",
+      "type": "shell",
+      "command": "poetry install",
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "npm install",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/code/frontend"
+      }
+    },
+    {
+      "type": "func",
+      "label": "func: host start",
+      "command": "host start",
+      "problemMatcher": "$func-python-watch",
+      "isBackground": true,
+      "dependsOn": "pip install (functions)",
+      "options": {
+        "cwd": "${workspaceFolder}/code/azure_function"
+      }
+    },
+    {
+      "label": "pip install (functions)",
+      "type": "shell",
+      "osx": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "windows": {
+        "command": "${config:azureFunctions.pythonVenv}/Scripts/python -m pip install -r requirements.txt"
+      },
+      "linux": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}/code/azure_function"
+      }
+    }
+  ]
 }

@@ -80,12 +80,14 @@ fi
 
 echo "Using Azure OpenAI endpoint: $AZURE_OPENAI_ENDPOINT"
 echo "Using Azure OpenAI model: $AZURE_OPENAI_MODEL"
-echo "API version: $AZURE_OPENAI_API_VERSION"
 
-# Run Docker Compose with environment variables from .env
+echo "Installing Python dependencies via Poetry..."
+poetry install
+
 echo "Starting Docker Compose environment..."
 docker-compose -f docker-compose.local.yml down --remove-orphans
-docker-compose -f docker-compose.local.yml up --build
+#docker-compose -f docker-compose.local.yml up --build
+docker-compose -f docker-compose.local.yml build
 
 # Note: The environment variables will be passed to Docker Compose
 # and then to the containers via ${VAR_NAME} syntax in docker-compose.local.yml
