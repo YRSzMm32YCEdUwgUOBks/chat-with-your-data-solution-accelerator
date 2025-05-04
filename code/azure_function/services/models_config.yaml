@@ -1,0 +1,16 @@
+# services/models_config.yaml
+models:
+  - name: primary
+    provider: azureopenai
+    config:
+      azureopenai_deployment_env: AZURE_OPENAI_DEPLOYMENT
+      azureopenai_endpoint_env: AZURE_OPENAI_ENDPOINT
+      azureopenai_api_key_env: AZURE_OPENAI_API_KEY
+      azureopenai_model_env: AZURE_OPENAI_MODEL
+      azureopenai_api_version: AZURE_OPENAI_API_VERSION
+    model_info:
+        family: gpt-4o
+        function_calling: true
+        json_output: true
+        structured_output: false
+        vision: true
