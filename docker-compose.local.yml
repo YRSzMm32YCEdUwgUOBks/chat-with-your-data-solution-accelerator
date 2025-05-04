@@ -39,17 +39,16 @@ services:
     build:
       context: .
       dockerfile: docker/Frontend.Dockerfile
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL}
     container_name: frontend-cwyd
     ports:
       - "8080:80"
+    env_file:
+      - ./.env
     environment:
       - BACKEND_URL=http://azure_function:80
       - AZURE_AUTH_ENABLED=false
-      - AZURE_STORAGE_ACCOUNT=devstoreaccount1
-      - AZURE_STORAGE_CONTAINER=config
-      - AZURE_STORAGE_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
-      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
-      - ENFORCE_AUTH=false
       - USE_DEFAULT_CONFIG=true
       - LOAD_CONFIG_FROM_BLOB_STORAGE=false
       - CONVERSATION_FLOW=byod
@@ -72,137 +71,45 @@ services:
       - AZURE_SPEECH_REGION=eastus
       - AZURE_SPEECH_ENDPOINT=https://eastus.api.cognitive.microsoft.com/
       # Set USE_LOCAL_MOCK_SERVICES for chat and speech
-      - USE_LOCAL_MOCK_SERVICES=true
+      - USE_LOCAL_MOCK_SERVICES=false
       # Disable Azure Monitor to fix the missing module error
       - ENABLE_MONITORING=false
       - APPLICATIONINSIGHTS_CONNECTION_STRING=
       - APPLICATION_INSIGHTS_ENABLED=false
+      # Vite variable for API backend endpoint
+      - VITE_BACKEND_URL=http://localhost:8088
     volumes:
       - ./code/frontend:/home/node/app/frontend:ro
-      # Add the environment file to the container
       - ./.env:/usr/src/app/.env:ro
     depends_on:
-      - backend
       - azurite
       - postgres
+      - azure_function
 
-  # Adjust Azure Function service build context
   azure_function:
     build:
       context: ./code/azure_function
       dockerfile: Dockerfile
     container_name: azure-function-cwyd
     ports:
-      - "8082:80"
+      - "8088:80"
     environment:
-      - AzureWebJobsScriptRoot=/home/site/wwwroot
-      - AzureFunctionsJobHost__Logging__Console__IsEnabled=true
-      - AzureWebJobsFeatureFlags=EnableWorkerIndexing
-      - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
-      - POSTGRES_CONNECTION_STRING=postgres://postgres:postgres@postgres:5432/postgres
-      - AZURE_AUTH_ENABLED=false
-      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
-      - AZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL}
-      - AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
-      - AZURE_OPENAI_SYSTEM_MESSAGE=You are an AI assistant that helps people find information.
-      - AZURE_OPENAI_TEMPERATURE=0.7
-      - AZURE_OPENAI_TOP_P=0.95
-      - AZURE_OPENAI_MAX_TOKENS=1000
-      - SHOULD_STREAM=true
-      # Use real OpenAI endpoint values from host environment
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-      - AZURE_AUTH_TYPE=keys
-      - ENFORCE_AUTH=false
-      - MOCK_OPENAI=true
+      # AzureWebJobsStorage and POSTGRES_CONNECTION_STRING remain here for local dev
+      AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      POSTGRES_CONNECTION_STRING: "postgres://postgres:postgres@postgres:5432/postgres"
+      CONTAINER_NAME: "local"
+      CORS_ALLOWED_ORIGINS: '["http://localhost:8080"]'
+      CORS_ALLOWED_METHODS: '["GET","POST","OPTIONS"]'
+      CORS_ALLOWED_HEADERS: '["Content-Type","Authorization"]'
+      CORS_SUPPORT_CREDENTIALS: "false"
+      AZURE_AUTH_ENABLED: "false"
     env_file:
       - ./.env
-    # volumes:
-    #   - ./code/azure_function:/home/site/wwwroot
     depends_on:
       postgres:
         condition: service_healthy
       azurite:
         condition: service_started
-
-  # Change backend port to 8083 to avoid conflict
-  backend:
-    build:
-      context: .
-      dockerfile: docker/Backend.Dockerfile
-    container_name: backend-cwyd
-    ports:
-      - "8083:80"
-    environment:
-      - AzureWebJobsScriptRoot=/home/site/wwwroot
-      - AzureFunctionsJobHost__Logging__Console__IsEnabled=true
-      - AzureWebJobsFeatureFlags=EnableWorkerIndexing
-      - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFeqCnf2P==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
-      - POSTGRES_CONNECTION_STRING=postgres://postgres:postgres@postgres:5432/postgres
-      - AZURE_AUTH_ENABLED=false
-      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
-      - AZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL}
-      - AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
-      - AZURE_OPENAI_SYSTEM_MESSAGE=You are an AI assistant that helps people find information.
-      - AZURE_OPENAI_TEMPERATURE=0.7
-      - AZURE_OPENAI_TOP_P=0.95
-      - AZURE_OPENAI_MAX_TOKENS=1000
-      - SHOULD_STREAM=true
-      # Use real OpenAI endpoint values from host environment
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-      - AZURE_AUTH_TYPE=keys
-      - ENFORCE_AUTH=false
-      - MOCK_OPENAI=true
-    env_file:
-      - ./.env
-    volumes:
-      - ./code/backend/azure_function:/home/site/wwwroot
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # Comment out the admin service for now
-  # admin:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/Admin.Dockerfile
-  #   container_name: admin-cwyd
-  #   ports:
-  #     - "8081:80"
-  #   environment:
-  #     - BACKEND_URL=http://backend:80 # Use the internal backend service name
-  #     - FUNCTION_KEY=some-test-key # Placeholder key for local dev
-  #     # Pass Azure OpenAI credentials from host environment
-  #     - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-  #     - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-  #     - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
-  #     - AZURE_OPENAI_MODEL=${AZURE_OPENAI_MODEL}
-  #     # Add other necessary environment variables from .env if needed
-  #     - AZURE_SEARCH_SERVICE=${AZURE_SEARCH_SERVICE}
-  #     - AZURE_SEARCH_INDEX=${AZURE_SEARCH_INDEX}
-  #     - AZURE_SEARCH_KEY=${AZURE_SEARCH_KEY}
-  #     - AZURE_BLOB_ACCOUNT_NAME=devstoreaccount1 # Use Azurite locally
-  #     - AZURE_BLOB_ACCOUNT_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw== # Azurite key
-  #     - AZURE_BLOB_CONTAINER_NAME=documents # Or your specific container
-  #     - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1; # Azurite connection string
-  #     - POSTGRESQL_HOST=postgres
-  #     - POSTGRESQL_DB=postgres
-  #     - POSTGRESQL_USER=postgres
-  #     - POSTGRESQL_PASSWORD=postgres
-  #     - DATABASE_TYPE=PostgreSQL
-  #     - AZURE_AUTH_ENABLED=false
-  #     - ENFORCE_AUTH=false
-  #   volumes:
-  #     # Mount the backend code for local development changes
-  #     #- ./code/backend:/usr/local/src/myscripts
-  #     #- ./code/backend/batch/utilities:/usr/local/src/myscripts/utilities
-  #     # Mount the .env file
-  #     - ./.env:/usr/local/src/myscripts/.env
-  #   depends_on:
-  #     - backend
-  #     - postgres
-  #     - azurite # Depends on Azurite for blob storage
 
   # Add Azurite for local Azure Blob Storage emulation
   azurite:

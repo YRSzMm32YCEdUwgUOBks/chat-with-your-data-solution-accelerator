@@ -86,8 +86,8 @@ poetry install
 
 echo "Starting Docker Compose environment..."
 docker-compose -f docker-compose.local.yml down --remove-orphans
-#docker-compose -f docker-compose.local.yml up --build
-docker-compose -f docker-compose.local.yml build
+docker-compose -f docker-compose.local.yml up --build
+#docker-compose -f docker-compose.local.yml build
 
 # Note: The environment variables will be passed to Docker Compose
 # and then to the containers via ${VAR_NAME} syntax in docker-compose.local.yml
