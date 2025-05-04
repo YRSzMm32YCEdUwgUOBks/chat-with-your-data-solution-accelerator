@@ -1,60 +1,104 @@
 import azure.functions as func
-import logging
-import json
+import os
 
-# import os  # needed for environment variable access
+from routes.health import health
+from routes.auth_config import check_auth, assistant_type
+from routes.history import (
+    history_list,
+    history_read,
+    history_update,
+    history_rename,
+    history_delete,
+    history_delete_all,
+    frontend_settings_get,
+)
+from routes.conversation import conversation_custom, conversation_history
+from routes.speech_token import speech_token
 
-# from autogen_agentchat.agents import AssistantAgent
-# from autogen_agentchat.teams import RoundRobinGroupChat
-# from autogen_agentchat.conditions import MaxMessageTermination
-# from autogen_agentchat.messages import TextMessage
-# from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+# Determine if Azure auth is enforced (via AZURE_AUTH_ENABLED); default false for local dev
+AUTH_ENABLED = os.getenv("AZURE_AUTH_ENABLED", "false").lower() in ("1", "true")
+# Set the auth level for all routes: Function key required if AUTH_ENABLED, else anonymous
+AUTH_LEVEL = func.AuthLevel.FUNCTION if AUTH_ENABLED else func.AuthLevel.ANONYMOUS
 
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# create the FunctionApp
+app = func.FunctionApp()
 
 
-@app.function_name(name="chat")
-@app.route(route="chat", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
-async def chat(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("Received POST request at /api/chat endpoint.")
-    try:
-        # TODO: validate 'Content-Type' header is 'application/json' and return 415 if not
-        # TODO: enforce maximum request body size to prevent excessively large payloads
-        data = req.get_json()
-        logging.debug(f"Request JSON payload: {data}")
-    except Exception as e:
-        logging.error(f"Failed to parse JSON body: {e}")
-        return func.HttpResponse(
-            json.dumps({"error": "Invalid JSON body"}),
-            status_code=400,
-            mimetype="application/json",
-        )
+# Register routes
+@app.route(route="health", methods=["GET"], auth_level=AUTH_LEVEL)
+def health_route(req: func.HttpRequest) -> func.HttpResponse:
+    return health(req)
 
-    user_message = data.get("message", "Hello?")
-    logging.info(f"Extracted user message: {user_message}")
 
-    try:
-        logging.info("Invoking run_chat with user message.")
-        reply = run_chat(user_message)
-        logging.info("run_chat executed successfully.")
-        logging.debug(f"Chat reply: {reply}")
-    except Exception as e:
-        logging.error(f"Error during chat processing: {e}")
-        return func.HttpResponse(
-            json.dumps({"error": "Chat processing failed"}),
-            status_code=500,
-            mimetype="application/json",
-        )
+@app.route(route="checkauth", methods=["GET"], auth_level=AUTH_LEVEL)
+def check_auth_route(req: func.HttpRequest) -> func.HttpResponse:
+    return check_auth(req)
 
-    logging.info("Returning response to client.")
+
+# stub out history/frontend_settings
+@app.route(route="history/frontend_settings", methods=["GET"], auth_level=AUTH_LEVEL)
+def frontend_settings_get_route(req: func.HttpRequest) -> func.HttpResponse:
+    return frontend_settings_get(req)
+
+
+@app.route(route="assistanttype", methods=["GET"], auth_level=AUTH_LEVEL)
+def assistant_type_route(req: func.HttpRequest) -> func.HttpResponse:
+    return assistant_type(req)
+
+
+@app.route(route="history/list", methods=["GET"], auth_level=AUTH_LEVEL)
+async def history_list_route(req: func.HttpRequest) -> func.HttpResponse:
+    return await history_list(req)
+
+
+@app.route(route="history/read", methods=["POST"], auth_level=AUTH_LEVEL)
+async def history_read_route(req: func.HttpRequest) -> func.HttpResponse:
+    return await history_read(req)
+
+
+@app.route(route="history/update", methods=["POST"], auth_level=AUTH_LEVEL)
+def history_update_route(req: func.HttpRequest) -> func.HttpResponse:
+    return history_update(req)
+
+
+@app.route(route="history/rename", methods=["POST"], auth_level=AUTH_LEVEL)
+def history_rename_route(req: func.HttpRequest) -> func.HttpResponse:
+    return history_rename(req)
+
+
+@app.route(route="history/delete", methods=["DELETE"], auth_level=AUTH_LEVEL)
+def history_delete_route(req: func.HttpRequest) -> func.HttpResponse:
+    return history_delete(req)
+
+
+@app.route(route="history/delete_all", methods=["DELETE"], auth_level=AUTH_LEVEL)
+def history_delete_all_route(req: func.HttpRequest) -> func.HttpResponse:
+    return history_delete_all(req)
+
+
+@app.route(route="conversation/custom", methods=["POST", "GET"], auth_level=AUTH_LEVEL)
+async def conversation_custom_route(req: func.HttpRequest) -> func.HttpResponse:
+    return await conversation_custom(req)
+
+
+@app.route(route="conversation/history", methods=["GET", "POST"], auth_level=AUTH_LEVEL)
+async def conversation_history_route(req: func.HttpRequest) -> func.HttpResponse:
+    return await conversation_history(req)
+
+
+@app.route(route="speech/token", methods=["GET"], auth_level=AUTH_LEVEL)
+def speech_token_route(req: func.HttpRequest) -> func.HttpResponse:
+    return speech_token(req)
+
+
+# CORS preflight handler for all routes
+@app.route(route="{*all}", methods=["OPTIONS"])
+def options_handler(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(
-        json.dumps({"response": reply}), status_code=200, mimetype="application/json"
+        status_code=204,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET,POST,OPTIONS,DELETE",
+            "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        },
     )
-
-
-def run_chat(user_message):
-    # TODO: replace stub with AzureOpenAIChatCompletionClient invocation
-    # TODO: implement retry/backoff, async/await or threaded offloading for CPU-bound tasks
-    # stub implementation
-    logging.info(f"run_chat called with: {user_message}")
-    return f"Echo: {user_message}"
