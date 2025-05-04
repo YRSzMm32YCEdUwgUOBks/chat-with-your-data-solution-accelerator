@@ -13,7 +13,7 @@ export default defineConfig({
         host: true,
         proxy: {
             "/api": {
-                target: "http://127.0.0.1:5050",
+                target: "http://azure_function:80",
                 changeOrigin: true,
                 secure: false
             }

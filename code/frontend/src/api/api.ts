@@ -5,11 +5,17 @@ import {
   FrontEndSettings,
 } from "./models";
 
+// base URL for backend API
+// - In Azure/prod: set VITE_BACKEND_URL to your function's URL via environment
+// - In local dev: fallback to localhost:8088 where func container is mapped
+const BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ?? `${window.location.protocol}//${window.location.hostname}:8088`;
+
 export async function callConversationApi(
   options: ConversationRequest,
   abortSignal: AbortSignal
 ): Promise<Response> {
-  const response = await fetch("/api/conversation", {
+  const response = await fetch(`${BASE_URL}/api/conversation/custom`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -56,7 +62,7 @@ export async function getUserInfo(): Promise<UserInfo[]> {
 
 export async function checkAuthEnforced(): Promise<boolean> {
   try {
-    const response = await fetch("/api/checkauth", {
+    const response = await fetch(`${BASE_URL}/api/checkauth`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -75,7 +81,7 @@ export async function checkAuthEnforced(): Promise<boolean> {
 
 export async function getAssistantTypeApi() {
   try {
-    const response = await fetch("/api/assistanttype", {
+    const response = await fetch(`${BASE_URL}/api/assistanttype`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -95,7 +101,7 @@ export async function getAssistantTypeApi() {
 }
 
 export const historyRead = async (convId: string): Promise<ChatMessage[]> => {
-  const response = await fetch("/api/history/read", {
+  const response = await fetch(`${BASE_URL}/api/history/read`, {
     method: "POST",
     body: JSON.stringify({
       conversation_id: convId,
@@ -134,7 +140,7 @@ export const historyRead = async (convId: string): Promise<ChatMessage[]> => {
 export const historyList = async (
   offset = 0
 ): Promise<Conversation[] | null> => {
-  let response = await fetch(`/api/history/list?offset=${offset}`, {
+  let response = await fetch(`${BASE_URL}/api/history/list?offset=${offset}`, {
     method: "GET",
   })
     .then(async (res) => {
@@ -166,7 +172,7 @@ export const historyUpdate = async (
   messages: ChatMessage[],
   convId: string
 ): Promise<Response> => {
-  const response = await fetch("/api/history/update", {
+  const response = await fetch(`${BASE_URL}/api/history/update`, {
     method: "POST",
     body: JSON.stringify({
       conversation_id: convId,
@@ -195,7 +201,7 @@ export const historyRename = async (
   convId: string,
   title: string
 ): Promise<Response> => {
-  const response = await fetch("/api/history/rename", {
+  const response = await fetch(`${BASE_URL}/api/history/rename`, {
     method: "POST",
     body: JSON.stringify({
       conversation_id: convId,
@@ -221,7 +227,7 @@ export const historyRename = async (
 };
 
 export const historyDelete = async (convId: string): Promise<Response> => {
-  const response = await fetch("/api/history/delete", {
+  const response = await fetch(`${BASE_URL}/api/history/delete`, {
     method: "DELETE",
     body: JSON.stringify({
       conversation_id: convId,
@@ -246,7 +252,7 @@ export const historyDelete = async (convId: string): Promise<Response> => {
 };
 
 export const historyDeleteAll = async (): Promise<Response> => {
-  const response = await fetch("api/history/delete_all", {
+  const response = await fetch(`${BASE_URL}/api/history/delete_all`, {
     method: "DELETE",
     body: JSON.stringify({}),
     headers: {
@@ -270,7 +276,7 @@ export const historyDeleteAll = async (): Promise<Response> => {
 
 export async function getFrontEndSettings(): Promise<FrontEndSettings> {
   try {
-    const response = await fetch("/api/history/frontend_settings", {
+    const response = await fetch(`${BASE_URL}/api/history/frontend_settings`, {
       method: "GET",
     });
     if (!response.ok) {
