@@ -1,23 +1,22 @@
-[Back to *Chat with your data* README](../README.md)
-
 # Local Development (Fast Start)
 
-> **This fork is optimized for rapid, modular local development.**
-> No Azure subscription required for local dev. All services run locally via Docker Compose.
-> Ideal for frontend/backend contributors and fast prototyping.
+> ℹ️ **Info:** This project is currently a stubbed-out framework. The local environment and Autogen load successfully, but core business logic and integrations are not yet implemented. This is a foundation for further development, not a production-ready or feature-complete solution.
+
+**Updated: 2025‑05‑04**
+This document reflects the latest, fully Dockerized local workflow—before merging with frontend code.
+**Note:** All backend and admin functionality now lives in `code/azure_function`, which replaces the legacy `backend` and `admin` services/sites.
 
 ---
 
 ## Service Overview
 
-| Service   | Port(s) | Description                        |
-|-----------|---------|------------------------------------|
-| frontend  | 8080    | React UI (Vite, hot reload)        |
-| backend   | 8082    | Python API (Flask/Azure Functions) |
-| admin     | 8081    | Admin UI (Streamlit)               |
-| postgres  | 5432    | PostgreSQL (with pgvector)         |
-| azurite   | 10000+  | Azure Blob/Queue/Table emulator    |
-| migrate   | -       | DB migration/init (runs once)      |
+| Service         | Port Mapping    | Description                                                    |
+|-----------------|----------------|----------------------------------------------------------------|
+| frontend        | 8080 → 80      | React UI (Vite, hot reload in Docker)                          |
+| azure_function  | 8088 → 80      | Azure Functions API (Python, replaces backend & admin)         |
+| postgres        | 5432 → 5432    | PostgreSQL (with pgvector)                                     |
+| azurite         | 10000+ → 10000+| Azure Blob/Queue/Table emulator                                |
+| migrate         | n/a            | DB migration/init (runs at build time via `migrate` service)   |
 
 ---
 
@@ -30,6 +29,7 @@ Cloning inside WSL avoids slow file access between Windows and Linux filesystems
 git clone https://github.com/YRSzMm32YCEdUwgUOBks/chat-with-your-data-solution-accelerator.git
 cd chat-with-your-data-solution-accelerator
 cp .env.example .env
+# edit .env as needed
 ```
 
 ---
@@ -52,12 +52,18 @@ cp .env.example .env
 
 ---
 
-## 3️⃣ Start All Services
+## 3️⃣🚀 Start All Services
 
-This should be done automatically when the devcontainer reopens. If not, or to reinitalize, run from the VS Code terminal (or WSL shell):
+This should be done automatically when the devcontainer reopens. If not, or to reinitialize, run from the VS Code terminal (or WSL shell):
 
 ```bash
 ./start.sh
+```
+
+Or manually:
+
+```bash
+docker compose -f docker-compose.local.yml up -d
 ```
 
 - This loads your `.env` and starts all services via Docker Compose.
@@ -68,28 +74,53 @@ This should be done automatically when the devcontainer reopens. If not, or to r
   > (Use `docker compose` not `docker-compose` for best compatibility.)
 
 ![All local services running and ready for local dev](images/cwyd-localdeploy-running.png)
+
+---
+
+### 🐳 Docker Compose Command Reference
+
+Use this table to understand the effects of common Docker Compose and Docker commands during development:
+
+| Command                                     | Rebuild?     | Recreate Container? | Remove Containers? | Remove Images? | Remove Volumes? | Affects Orphans? | Notes                                             |
+| ------------------------------------------- | ------------ | ------------------- | ------------------ | -------------- | --------------- | ---------------- | ------------------------------------------------- |
+| `docker restart`                            | ❌            | ✅                   | ❌                  | ❌              | ❌               | ❌                | Fast container bounce                             |
+| `docker stop/start`                         | ❌            | ✅                   | ❌                  | ❌              | ❌               | ❌                | Manual restart cycle                              |
+| `up -d`                                     | ❌            | Maybe               | ❌                  | ❌              | ❌               | ❌                | Reuses containers/images                          |
+| `up -d --build`                             | ✅ (cached)   | Maybe               | ❌                  | ❌              | ❌               | ❌                | Rebuild if needed                                 |
+| `up -d --build --force-recreate`            | ✅            | ✅                   | ✅                  | ❌              | ❌               | ❌                | Full clean container setup                        |
+| `up -d --build --no-cache --force-recreate` | ✅ (no cache) | ✅                   | ✅                  | ❌              | ❌               | ❌                | Avoids Docker cache                               |
+| `down`                                      | ❌            | ✅                   | ✅                  | ❌              | ❌               | ❌                | Stops + removes containers only                   |
+| `down --rmi all`                            | ❌            | ✅                   | ✅                  | ✅              | ❌               | ❌                | Also deletes images                               |
+| `down --rmi all --volumes`                  | ❌            | ✅                   | ✅                  | ✅              | ✅               | ❌                | Full cleanup                                      |
+| `down --remove-orphans`                     | ❌            | ✅                   | ✅                  | ❌              | ❌               | ✅                | ⚠️ Removes orphan containers tied to same project |
+| `docker system prune -a`                    | ✅            | ✅                   | ✅                  | ✅              | ✅               | ✅ (indirectly)   | Full system wipe — only for brave souls           |
+
 ---
 
 ## 4️⃣ Access the Apps
 
 - **Frontend:** [http://localhost:8080/](http://localhost:8080/)
-- **Admin:** [http://localhost:8081/](http://localhost:8081/)
-- **Backend API:** [http://localhost:8082/](http://localhost:8082/)
+- **Backend/API (replaces admin and backend):** [http://localhost:8088/](http://localhost:8088/)
 
-> ![place screenshot of all three apps running in browser here]
+> The `azure_function` service now handles all backend and admin endpoints.
+> There is no longer a separate admin UI or backend Flask service.
 
 ---
 
 ## 5️⃣ Typical Workflow
 
-- Edit code in `code/frontend`, `code/backend`, or `code/backend/batch`.
-- Frontend hot reloads automatically.
-- Backend/admin restart on code changes (or restart containers).
+- Edit code in:
+  - `code/frontend`
+  - `code/azure_function` (all API & admin logic)
+- Frontend hot reloads automatically in Docker.
+- Azure Function restarts on code changes (rebuild container as needed).
 - Database and storage persist unless you remove Docker volumes.
 
 ---
 
-## Advanced: Run Individual Services
+## 🔬 Advanced: Run Individual Services
+
+_Optional for non-Docker debugging._
 
 **Frontend only:**
 ```bash
@@ -99,17 +130,18 @@ npm run dev
 # → http://localhost:5174/
 ```
 
-**Backend only:**
+**Azure Function only:**
 ```bash
-cd code/backend
-poetry install
-poetry run flask run
-# → http://localhost:5000/
+cd code/azure_function
+pip3 install -r requirements.txt
+func start --python
+# → http://localhost:7071/
 ```
+> Note: When running outside Docker, the Azure Function will be on port 7071 by default.
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
 - **Docker not running?** Start Docker Desktop in Windows before launching WSL/VS Code.
 - **Dev Container build slow?** Make sure you are in WSL, not Windows filesystem.
@@ -124,76 +156,38 @@ poetry run flask run
 
 ---
 
-## Legacy/Advanced (Azure, RBAC, Bicep, etc.)
+## ☁️ Legacy/Advanced (Azure, RBAC, Bicep, etc.)
 
 - For full Azure deployment, RBAC, or advanced configuration, see the [original Microsoft README](https://github.com/Azure-Samples/chat-with-your-data-solution-accelerator/blob/main/README.md).
 - **macOS Apple Silicon:** DevContainer may not work ([see upstream issue](https://github.com/Azure/azure-functions-core-tools/issues/3112)). Use [NON_DEVCONTAINER_SETUP.md](../NON_DEVCONTAINER_SETUP.md) if needed.
 
-## Environment variables
+---
 
-> **Note:** Many of the environment variables listed below are for Azure cloud deployment and are not required for local development. This section will be cleaned up in the future to better distinguish between local and cloud-only variables.
+## 🔑 Environment variables
 
-### Minimum required environment variables for local deployment
+Below are the minimum required environment variables for local development.
+Set these in your `.env` file.
+**Comments explain their purpose.**
 
-For a typical local setup, you only need to set the following variables in your `.env` file:
+| Variable                        | Example Value                | Service                        | Purpose / Notes                                 |
+|----------------------------------|------------------------------|--------------------------------|-------------------------------------------------|
+| `POSTGRESQL_PASSWORD`           | `postgres`                   | PostgreSQL (Local)             | Password for local PostgreSQL                   |
+| `POSTGRESQL_USER`               | `postgres`                   | PostgreSQL (Local)             | Username for local PostgreSQL                   |
+| `POSTGRESQL_DB`                 | `postgres`                   | PostgreSQL (Local)             | Database name for local PostgreSQL              |
+| `POSTGRESQL_HOST`               | `localhost`                  | PostgreSQL (Local)             | Host for local PostgreSQL                       |
+| `AZURE_BLOB_ACCOUNT_NAME`       | `devstoreaccount1`           | Azurite (Local Blob Storage)   | Azurite blob emulator account name              |
+| `AZURE_BLOB_ACCOUNT_KEY`        | *(see .env.sample)*          | Azurite (Local Blob Storage)   | Azurite blob emulator account key               |
+| `AZURE_BLOB_CONTAINER_NAME`     | `documents`                  | Azurite (Local Blob Storage)   | Blob container for document storage             |
+| `AzureWebJobsStorage`           | *(see .env.sample)*          | Azurite (Local Blob Storage)   | Connection string for Azurite (local only)      |
+| `VITE_BACKEND_URL`              | `http://localhost:8088`      | Frontend (Vite)                | Frontend API base URL (local Azure Function)    |
+| `AZURE_OPENAI_API_KEY`          | *(your key or blank)*        | Azure OpenAI                   | Only needed if testing OpenAI locally           |
+| `AZURE_OPENAI_MODEL_NAME`       | `gpt-4o-mini`                | Azure OpenAI                   | (Optional, defaults to `gpt-4o-mini`)           |
+| `AZURE_OPENAI_EMBEDDING_MODEL`  | `text-embedding-3-large`     | Azure OpenAI                   | (Optional, defaults to `text-embedding-3-large`)|
+| `CHAT_HISTORY_ENABLED`          | `true`                       | Application                    | Enables chat history in local dev               |
 
-- `POSTGRES_PASSWORD` – Password for the local PostgreSQL instance
-- `AZURE_OPENAI_API_KEY` – (Optional for local, only if testing OpenAI integration)
-- `AZURE_OPENAI_MODEL_NAME` – (Optional, defaults to `gpt-4o`)
-- `AZURE_OPENAI_EMBEDDING_MODEL_NAME` – (Optional, defaults to `text-embedding-ada-002`)
+> Other variables can be left as defaults or blank for local development.
 
-All other variables can be left as defaults or empty for local-only development.
-
-
-| App Setting | Value | Note |
-| --- | --- | ------------- |
-|AZURE_SEARCH_SERVICE||The URL of your Azure AI Search resource. e.g. https://<search-service>.search.windows.net|
-|AZURE_SEARCH_INDEX||The name of your Azure AI Search Index|
-|AZURE_SEARCH_KEY||An **admin key** for your Azure AI Search resource|
-|AZURE_SEARCH_USE_SEMANTIC_SEARCH|False|Whether or not to use semantic search|
-|AZURE_SEARCH_SEMANTIC_SEARCH_CONFIG|default|The name of the semantic search configuration to use if using semantic search.|
-|AZURE_SEARCH_TOP_K|5|The number of documents to retrieve from Azure AI Search.|
-|AZURE_SEARCH_ENABLE_IN_DOMAIN|True|Limits responses to only queries relating to your data.|
-|AZURE_SEARCH_CONTENT_COLUMN||List of fields in your Azure AI Search index that contains the text content of your documents to use when formulating a bot response. Represent these as a string joined with "|", e.g. `"product_description|product_manual"`|
-|AZURE_SEARCH_CONTENT_VECTOR_COLUMN||Field from your Azure AI Search index for storing the content's Vector embeddings|
-|AZURE_SEARCH_DIMENSIONS|1536| Azure OpenAI Embeddings dimensions. 1536 for `text-embedding-ada-002`. A full list of dimensions can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#embeddings-models). |
-|AZURE_SEARCH_FIELDS_ID|id|`AZURE_SEARCH_FIELDS_ID`: Field from your Azure AI Search index that gives a unique idenitfier of the document chunk. `id` if you don't have a specific requirement.|
-|AZURE_SEARCH_FILENAME_COLUMN||`AZURE_SEARCH_FILENAME_COLUMN`: Field from your Azure AI Search index that gives a unique idenitfier of the source of your data to display in the UI.|
-|AZURE_SEARCH_TITLE_COLUMN||Field from your Azure AI Search index that gives a relevant title or header for your data content to display in the UI.|
-|AZURE_SEARCH_URL_COLUMN||Field from your Azure AI Search index that contains a URL for the document, e.g. an Azure Blob Storage URI. This value is not currently used.|
-|AZURE_SEARCH_FIELDS_TAG|tag|Field from your Azure AI Search index that contains tags for the document. `tag` if you don't have a specific requirement.|
-|AZURE_SEARCH_FIELDS_METADATA|metadata|Field from your Azure AI Search index that contains metadata for the document. `metadata` if you don't have a specific requirement.|
-|AZURE_SEARCH_FILTER||Filter to apply to search queries.|
-|AZURE_SEARCH_USE_INTEGRATED_VECTORIZATION ||Whether to use [Integrated Vectorization](https://learn.microsoft.com/en-us/azure/search/vector-search-integrated-vectorization)|
-|AZURE_OPENAI_RESOURCE||the name of your Azure OpenAI resource|
-|AZURE_OPENAI_MODEL||The name of your model deployment|
-|AZURE_OPENAI_MODEL_NAME|gpt-4o|The name of the model|
-|AZURE_OPENAI_MODEL_VERSION|2024-05-13|The version of the model to use|
-|AZURE_OPENAI_API_KEY||One of the API keys of your Azure OpenAI resource|
-|AZURE_OPENAI_EMBEDDING_MODEL|text-embedding-ada-002|The name of your Azure OpenAI embeddings model deployment|
-|AZURE_OPENAI_EMBEDDING_MODEL_NAME|text-embedding-ada-002|The name of the embeddings model (can be found in Azure AI Foundry)|
-|AZURE_OPENAI_EMBEDDING_MODEL_VERSION|2|The version of the embeddings model to use (can be found in Azure AI Foundry)|
-|AZURE_OPENAI_TEMPERATURE|0|What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. A value of 0 is recommended when using your data.|
-|AZURE_OPENAI_TOP_P|1.0|An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. We recommend setting this to 1.0 when using your data.|
-|AZURE_OPENAI_MAX_TOKENS|1000|The maximum number of tokens allowed for the generated answer.|
-|AZURE_OPENAI_STOP_SEQUENCE||Up to 4 sequences where the API will stop generating further tokens. Represent these as a string joined with "|", e.g. `"stop1|stop2|stop3"`|
-|AZURE_OPENAI_SYSTEM_MESSAGE|You are an AI assistant that helps people find information.|A brief description of the role and tone the model should use|
-|AZURE_OPENAI_API_VERSION|2024-02-01|API version when using Azure OpenAI on your data|
-|AzureWebJobsStorage||The connection string to the Azure Blob Storage for the Azure Functions Batch processing|
-|BACKEND_URL||The URL for the Backend Batch Azure Function. Use http://localhost:7071 for local execution|
-|DOCUMENT_PROCESSING_QUEUE_NAME|doc-processing|The name of the Azure Queue to handle the Batch processing|
-|AZURE_BLOB_ACCOUNT_NAME||The name of the Azure Blob Storage for storing the original documents to be processed|
-|AZURE_BLOB_ACCOUNT_KEY||The key of the Azure Blob Storage for storing the original documents to be processed|
-|AZURE_BLOB_CONTAINER_NAME||The name of the Container in the Azure Blob Storage for storing the original documents to be processed|
-|AZURE_FORM_RECOGNIZER_ENDPOINT||The name of the Azure Form Recognizer for extracting the text from the documents|
-|AZURE_FORM_RECOGNIZER_KEY||The key of the Azure Form Recognizer for extracting the text from the documents|
-|APPLICATIONINSIGHTS_CONNECTION_STRING||The Application Insights connection string to store the application logs|
-|ORCHESTRATION_STRATEGY | openai_function | Orchestration strategy. Use Azure OpenAI Functions (openai_function), Semantic Kernel (semantic_kernel),  LangChain (langchain) or Prompt Flow (prompt_flow) for messages orchestration. If you are using a new model version 0613 select any strategy, if you are using a 0314 model version select "langchain". Note that both `openai_function` and `semantic_kernel` use OpenAI function calling. Prompt Flow option is still in development and does not support RBAC or integrated vectorization as of yet.|
-|AZURE_CONTENT_SAFETY_ENDPOINT | | The endpoint of the Azure AI Content Safety service |
-|AZURE_CONTENT_SAFETY_KEY | | The key of the Azure AI Content Safety service|
-|AZURE_SPEECH_SERVICE_KEY | | The key of the Azure Speech service|
-|AZURE_SPEECH_SERVICE_REGION | | The region (location) of the Azure Speech service|
-|AZURE_AUTH_TYPE | keys | The default is to use API keys. Change the value to 'rbac' to authenticate using Role Based Access Control. For more information refer to section [Authenticate using RBAC](#authenticate-using-rbac)
+---
 
 ## Bicep
 
