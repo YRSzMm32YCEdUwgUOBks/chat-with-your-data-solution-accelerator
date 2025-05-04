@@ -92,6 +92,7 @@ services:
       dockerfile: Dockerfile
     container_name: azure-function-cwyd
     ports:
+      # when azure function in container it exposes port 80 (also locally)
       - "8088:80"
     environment:
       # AzureWebJobsStorage and POSTGRES_CONNECTION_STRING remain here for local dev
@@ -123,3 +124,6 @@ services:
 
 volumes:
   db-data:
+
+# Note: the legacy 'backend' and 'admin' services have been removed.
+# Use the 'azure_function' service (port 8088 → 80) instead.
