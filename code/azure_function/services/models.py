@@ -1,5 +1,6 @@
 import os
 from typing import Dict
+from dataclasses import asdict, is_dataclass
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from .models_config import load_models_config, ModelsConfig, ModelConfig
 
@@ -31,15 +32,30 @@ class ModelClientFactory:
         return client
 
     def _create_client(self, model_cfg: ModelConfig):
+        import logging
+
+        logger = logging.getLogger("azure.functions")
         provider = model_cfg.provider.lower()
         if provider == "azureopenai":
             conf = model_cfg.config
-            deployment = os.getenv(conf.get("azureopenai_deployment_env"))
-            endpoint = os.getenv(conf.get("azureopenai_endpoint_env"))
-            api_key = os.getenv(conf.get("azureopenai_api_key_env"))
-            # model can be directly specified or via env
-            model = conf.get("model") or os.getenv(conf.get("azureopenai_model_env"))
-            api_version = conf.get("azureopenai_api_version")
+            deployment = os.getenv(conf.get("azure_openai_deployment_env"))
+            endpoint = os.getenv(conf.get("azure_openai_endpoint_env"))
+            api_key = os.getenv(conf.get("azure_openai_api_key_env"))
+            model = os.getenv(conf.get("azure_openai_model_env"))
+            api_version = os.getenv(conf.get("azure_openai_api_version_env"))
+            # Ensure model_info is a dict
+            if getattr(model_cfg, "model_info", None) is not None:
+                if is_dataclass(model_cfg.model_info):
+                    model_info = asdict(model_cfg.model_info)
+                elif isinstance(model_cfg.model_info, dict):
+                    model_info = model_cfg.model_info
+                else:
+                    model_info = dict(model_cfg.model_info)
+            else:
+                model_info = None
+            logger.info(
+                f"AzureOpenAIChatCompletionClient args: model={model}, deployment={deployment}, endpoint={endpoint}, api_version={api_version}, api_key={'set' if api_key else 'unset'}, model_info={model_info}"
+            )
             return AzureOpenAIChatCompletionClient(
                 azure_deployment=deployment,
                 model=model,
@@ -47,6 +63,7 @@ class ModelClientFactory:
                 azure_endpoint=endpoint,
                 azure_ad_token_provider=None,
                 api_key=api_key,
+                model_info=model_info,
             )
         # TODO: add support for other providers (openai, ollama, anthropic, etc.)
         raise NotImplementedError(f"Provider '{model_cfg.provider}' not implemented")

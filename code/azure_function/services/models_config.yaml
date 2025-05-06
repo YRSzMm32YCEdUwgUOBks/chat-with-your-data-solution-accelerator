@@ -3,11 +3,11 @@ models:
   - name: primary
     provider: azureopenai
     config:
-      azureopenai_deployment_env: AZURE_OPENAI_DEPLOYMENT
-      azureopenai_endpoint_env: AZURE_OPENAI_ENDPOINT
-      azureopenai_api_key_env: AZURE_OPENAI_API_KEY
-      azureopenai_model_env: AZURE_OPENAI_MODEL
-      azureopenai_api_version: AZURE_OPENAI_API_VERSION
+      azure_openai_deployment_env: AZURE_OPENAI_DEPLOYMENT
+      azure_openai_endpoint_env: AZURE_OPENAI_ENDPOINT
+      azure_openai_api_key_env: AZURE_OPENAI_API_KEY
+      azure_openai_model_env: AZURE_OPENAI_MODEL_NAME
+      azure_openai_api_version_env: AZURE_OPENAI_API_VERSION
     model_info:
         family: gpt-4o
         function_calling: true

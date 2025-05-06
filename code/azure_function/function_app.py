@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import azure.functions as func
 import os
 import logging
+import json
 
 from routes.health import health
 from routes.auth_config import check_auth, assistant_type
@@ -112,10 +113,22 @@ def history_delete_all_route(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="conversation/custom", methods=["POST", "GET"], auth_level=AUTH_LEVEL)
 async def conversation_custom_route(req: func.HttpRequest) -> func.HttpResponse:
+    logger.info("conversation_custom_route called")
     try:
-        return await conversation_custom(req)
+        resp = await conversation_custom(req)
+        logger.info(f"conversation_custom_route response status: {resp.status_code}")
+        return resp
     except Exception as e:
-        return func.HttpResponse(f"Error: {e}", status_code=500)
+        import traceback
+
+        logger.error(f"conversation_custom_route exception: {e}")
+        logger.error(traceback.format_exc())
+        return func.HttpResponse(
+            json.dumps({"error": str(e), "trace": traceback.format_exc()}),
+            status_code=500,
+            mimetype="application/json",
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
 
 
 @app.route(route="conversation/history", methods=["GET", "POST"], auth_level=AUTH_LEVEL)
