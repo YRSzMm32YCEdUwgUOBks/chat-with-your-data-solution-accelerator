@@ -107,8 +107,6 @@ services:
     env_file:
       - ./.env
     depends_on:
-      postgres:
-        condition: service_healthy
       azurite:
         condition: service_started
 

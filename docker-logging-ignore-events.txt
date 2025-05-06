@@ -1,4 +1,4 @@
-MS_FUNCTION_(LOGS|METRICS)
+MS_FUNCTION_METRICS
 azurite-cwyd
 PUT /devstoreaccount1/azure-webjobs-hosts/locks//host\?comp=lease
 System\.UriFormatException.*LinuxContainerMetricsPublisher

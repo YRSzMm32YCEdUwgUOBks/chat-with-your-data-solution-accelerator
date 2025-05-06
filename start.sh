@@ -1,4 +1,23 @@
 #!/bin/bash
+###############################################################################
+# start.sh
+#
+# Purpose:   Professional startup script for initializing Azure OpenAI environment
+#            and launching the Docker Compose environment for local development.
+#
+# Usage:     ./start.sh [OPTIONS]
+#            -e, --env-file FILE  Path to .env file (default: ./.env)
+#            -h, --help           Display help message and exit
+#
+# Prereqs:   - .env file with Azure OpenAI credentials
+#            - Docker, Docker Compose, Poetry, Python, Node.js, Azure CLI installed
+#
+# Author:    [Your Name]
+# Date:      2025-05-04
+#
+# Notes:     This script does not modify any application code. It only sets up
+#            environment variables and launches the local dev environment.
+###############################################################################
 
 # This script sets up the environment variables for Azure OpenAI and runs the Docker Compose environment
 # It sources values from the .env file but allows overriding them with command-line arguments
@@ -8,10 +27,11 @@ ENV_FILE="./.env"
 
 # Function to display usage information
 function show_usage {
-  echo "Usage: $0 [OPTIONS]"
-  echo "Options:"
-  echo "  -e, --env-file FILE  Path to .env file (default: ./.env)"
-  echo "  -h, --help           Display this help message and exit"
+  echo "\n\033[1mUsage:\033[0m $0 [OPTIONS]"
+  echo "\033[1mOptions:\033[0m"
+  echo "  -e, --env-file FILE   Path to .env file (default: ./.env)"
+  echo "  -h, --help            Display this help message and exit"
+  echo
 }
 
 # Parse command-line options
@@ -26,7 +46,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "\n\033[31m[ERROR]\033[0m Unknown option: $1"
       show_usage
       exit 1
       ;;
@@ -35,13 +55,13 @@ done
 
 # Check if .env file exists
 if [ ! -f "$ENV_FILE" ]; then
-  echo "Error: Environment file '$ENV_FILE' not found."
+  echo "\n\033[31m[ERROR]\033[0m Environment file '$ENV_FILE' not found."
   echo "Please create this file with your Azure OpenAI API credentials."
   exit 1
 fi
 
 # Load environment variables from .env file more safely
-echo "Loading environment variables from $ENV_FILE"
+echo -e "\n\033[1m[INFO]\033[0m Loading environment variables from $ENV_FILE..."
 
 # Use a temporary file for cleaned environment variables
 TEMP_ENV_FILE=$(mktemp)
@@ -54,7 +74,7 @@ while IFS='=' read -r key value; do
 
   # Skip if key contains invalid characters
   if [[ ! "$key" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
-    echo "Warning: Skipping invalid environment variable: $key"
+    echo -e "\033[33m[WARNING]\033[0m Skipping invalid environment variable: $key"
     continue
   fi
 
@@ -68,25 +88,25 @@ rm "$TEMP_ENV_FILE"
 # Check if AZURE_OPENAI_ENDPOINT is set directly, if not, construct it from AZURE_OPENAI_RESOURCE
 if [ -z "$AZURE_OPENAI_ENDPOINT" ] && [ -n "$AZURE_OPENAI_RESOURCE" ]; then
   export AZURE_OPENAI_ENDPOINT="https://${AZURE_OPENAI_RESOURCE}.openai.azure.com"
-  echo "Constructed Azure OpenAI endpoint from resource name: $AZURE_OPENAI_ENDPOINT"
+  echo -e "\033[1m[INFO]\033[0m Constructed Azure OpenAI endpoint from resource name: $AZURE_OPENAI_ENDPOINT"
 fi
 
 # Verify essential variables are set
 if [ -z "$AZURE_OPENAI_ENDPOINT" ] || [ -z "$AZURE_OPENAI_API_KEY" ]; then
-  echo "Error: Azure OpenAI API credentials not found in $ENV_FILE"
-  echo "Please ensure AZURE_OPENAI_ENDPOINT (or AZURE_OPENAI_RESOURCE) and AZURE_OPENAI_API_KEY are set."
+  echo -e "\n\033[31m[ERROR]\033[0m Azure OpenAI API credentials not found in $ENV_FILE."
+  echo -e "Please ensure AZURE_OPENAI_ENDPOINT (or AZURE_OPENAI_RESOURCE) and AZURE_OPENAI_API_KEY are set."
   exit 1
 fi
 
-echo "Using Azure OpenAI endpoint: $AZURE_OPENAI_ENDPOINT"
-echo "Using Azure OpenAI model: $AZURE_OPENAI_MODEL"
+echo -e "\n\033[1m[INFO]\033[0m Using Azure OpenAI endpoint: $AZURE_OPENAI_ENDPOINT"
+echo -e "\033[1m[INFO]\033[0m Using Azure OpenAI model: $AZURE_OPENAI_MODEL"
 
-echo "Installing Python dependencies via Poetry..."
+echo -e "\n\033[1m[STEP]\033[0m Installing Python dependencies via Poetry..."
 poetry install
 
-echo "Starting Docker Compose environment..."
+echo -e "\n\033[1m[STEP]\033[0m Starting Docker Compose environment..."
 docker-compose -f docker-compose.local.yml down --remove-orphans
-docker-compose -f docker-compose.local.yml up --build
+docker-compose -f docker-compose.local.yml up --build -d
 #docker-compose -f docker-compose.local.yml build
 
 # Note: The environment variables will be passed to Docker Compose

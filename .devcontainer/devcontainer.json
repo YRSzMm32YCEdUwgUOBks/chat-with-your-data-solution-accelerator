@@ -46,8 +46,8 @@
 		  "prompt-flow.prompt-flow"
 		],
 		"settings": {
-		  "python.defaultInterpreterPath": "/usr/local/bin/python",
-		  "python.pythonPath": "/usr/local/bin/python",
+		  "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+		  "python.pythonPath": "/workspace/.venv/bin/python",
 		  "remote.autoForwardPortsFallback": 0,
 		  "remote.autoForwardPortsSource": "process"
 		}
